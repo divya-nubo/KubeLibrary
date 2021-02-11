@@ -500,3 +500,66 @@ class KubeLibrary(object):
         """
         ret = self.v1.delete_namespaced_service_account(name=name, namespace=namespace)
         return ret
+
+
+    def get_healthcheck(self):
+      output = subprocess.check_output("kubectl get --raw='/readyz?verbose'", shell=True)
+      logger.debug(output)
+      return output
+
+    def get_ingresses_in_namespace(self, namespace, label_selector=""):
+        """Gets ingresses in given namespace.
+        Can be optionally filtered by label. e.g. label_selector=label_key=label_value
+        Returns list of strings.
+        - ``namespace``:
+          Namespace to check
+        """
+        ret = self.v1.list_namespaced_ingress(namespace, watch=False, label_selector=label_selector)
+        return [item.metadata.name for item in ret.items]
+
+
+
+    def get_ingress_details_in_namespace(self, name, namespace):
+        """Gets ingress details in given namespace.
+        Returns Ingress object representation. Can be accessed using
+        | Should Be Equal As integers    | ${service_details.spec.ports[0].port}    | 8080 |
+        - ``name``:
+          Name of ingress.
+        - ``namespace``:
+          Namespace to check
+        """
+        ret = self.v1.read_namespaced_ingress(name, namespace)
+        return ret
+
+    def get_k8objects(self):
+      output = subprocess.check_output("kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n default",shell=True)
+      logger.debug(output)
+      return output
+
+    def get_cronjobs_in_namespace(self, name_pattern, namespace, label_selector=""):
+        """Gets cronjobs matching pattern in given namespace.
+        Can be optionally filtered by label. e.g. label_selector=label_key=label_value
+        Returns list of cronjobs.
+        - ``name_pattern``:
+          cronjobs name pattern to check
+        - ``namespace``:
+          Namespace to check
+        """
+        ret = self.v1.list_namespaced_cronjobs(namespace, watch=False, label_selector=label_selector)
+        r = re.compile(name_pattern)
+        cronjobs = [item for item in ret.items if r.match(item.metadata.name)]
+        return cronjobs
+
+    def get_replicasets_in_namespace(self, name_pattern, namespace, label_selector=""):
+        """Gets replicasets matching pattern in given namespace.
+        Can be optionally filtered by label. e.g. label_selector=label_key=label_value
+        Returns list of replicasets.
+        - ``name_pattern``:
+          replicasets name pattern to check
+        - ``namespace``:
+          Namespace to check
+        """
+        ret = self.v1.list_namespaced_replicasets(namespace, watch=False, label_selector=label_selector)
+        r = re.compile(name_pattern)
+        replicasets = [item for item in ret.items if r.match(item.metadata.name)]
+        return replicasets
