@@ -4,6 +4,7 @@ import ssl
 import urllib3
 from kubernetes import client, config
 from robot.api import logger
+import requests
 
 # supressing SSL warnings when using self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -503,7 +504,7 @@ class KubeLibrary(object):
 
 
     def get_healthcheck(self):
-      output = subprocess.check_output("kubectl get --raw='/readyz?verbose'", shell=True)
+      output = requests.get('https://localhost:6443/readyz?verbose=', verify = False)
       logger.debug(output)
       return output
 
