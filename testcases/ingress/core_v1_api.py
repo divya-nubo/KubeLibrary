@@ -28728,7 +28728,7 @@ class CoreV1Api(object):
             _request_timeout=local_var_params.get('_request_timeout'),
             collection_formats=collection_formats)		
 		
-   def read_namespaced_ingress(self, name, namespace, **kwargs):  # noqa: E501
+    def read_namespaced_ingress(self, name, namespace, **kwargs):  # noqa: E501
         kwargs['_return_http_data_only'] = True
         return self.read_namespaced_service_with_http_info(name, namespace, **kwargs)  # noqa: E501
 
