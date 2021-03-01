@@ -4,7 +4,6 @@ import ssl
 import urllib3
 from kubernetes import client, config
 from robot.api import logger
-import requests
 
 # supressing SSL warnings when using self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -67,6 +66,8 @@ class KubeLibrary(object):
             except TypeError:
                 logger.error('Neither KUBECONFIG nor ~/.kube/config available.')
         self.v1 = client.CoreV1Api()
+        self.extensionsv1beta1 = client.ExtensionsV1beta1Api()
+        self.batchv1_beta1 = client.BatchV1beta1Api()
         self.batchv1 = client.BatchV1Api()
         self.appsv1 = client.AppsV1Api()
         if not cert_validation:
@@ -330,14 +331,14 @@ class KubeLibrary(object):
             for k, v in labels.items():
                 if pod.metadata.labels and k in pod.metadata.labels:
                     if pod.metadata.labels[k] != v:
-                        logger.error(f'Label "{k}" value "{v}" not matching actual "{pod.metadata.labels[k]}"')
+                        logger.error('Label "{k}" value "{v}" not matching actual "{pod.metadata.labels[k]}"')
                         return False
                 else:
-                    logger.error(f'Label "{k}" not found in actual')
+                    logger.error('Label "{k}" not found in actual')
                     return False
             return True
         except json.JSONDecodeError:
-            logger.error(f'Failed parsing Pod Labels JSON:{labels_json}')
+            logger.error('Failed parsing Pod Labels JSON:{labels_json}')
             return False
 
     def assert_pod_has_annotations(self, pod, annotations_json):
@@ -355,14 +356,14 @@ class KubeLibrary(object):
             for k, v in annotations.items():
                 if pod.metadata.annotations and k in pod.metadata.annotations:
                     if pod.metadata.annotations[k] != v:
-                        logger.error(f'Annotation "{k}" value "{v}" not matching actual "{pod.metadata.annotations[k]}"')
+                        logger.error('Annotation "{k}" value "{v}" not matching actual "{pod.metadata.annotations[k]}"')
                         return False
                 else:
-                    logger.error(f'Annotation "{k}" not found in actual')
+                    logger.error('Annotation "{k}" not found in actual')
                     return False
             return True
         except json.JSONDecodeError:
-            logger.error(f'Failed parsing Pod Annotations JSON:{annotations_json}')
+            logger.error('Failed parsing Pod Annotations JSON:{annotations_json}')
             return False
 
     def assert_container_has_env_vars(self, container, env_vars_json):
@@ -384,14 +385,14 @@ class KubeLibrary(object):
                         found = True
                         break
                     elif k == ev.name and v != ev.value:
-                        logger.error(f'Env var "{k}" value "{v}" not matching actual "{ev.value}"')
+                        logger.error('Env var "{k}" value "{v}" not matching actual "{ev.value}"')
                         return False
                 if not found:
-                    logger.error(f'Env var "{k}" not found in actual')
+                    logger.error('Env var "{k}" not found in actual')
                     return False
             return True
         except json.JSONDecodeError:
-            logger.error(f'Failed parsing Container Env Var JSON:{env_vars_json}')
+            logger.error('Failed parsing Container Env Var JSON:{env_vars_json}')
             return False
 
     def get_services_in_namespace(self, namespace, label_selector=""):
@@ -502,65 +503,23 @@ class KubeLibrary(object):
         ret = self.v1.delete_namespaced_service_account(name=name, namespace=namespace)
         return ret
 
-
-    def get_healthcheck(self):
-      output = requests.get('https://localhost:6443/readyz?verbose=', verify = False)
-      logger.debug(output)
-      return output
-
-    def get_ingresses_in_namespace(self, namespace, label_selector=""):
-        """Gets ingresses in given namespace.
+    def get_cron_jobs_in_namespace(self, namespace, label_selector=""):
+        """Gets cron jobs in given namespace.
         Can be optionally filtered by label. e.g. label_selector=label_key=label_value
         Returns list of strings.
         - ``namespace``:
           Namespace to check
         """
-        ret = self.v1.list_namespaced_ingress(namespace, watch=False, label_selector=label_selector)
+        ret = self.batchv1_beta1.list_namespaced_cron_job(namespace, watch=False, label_selector=label_selector)
         return [item.metadata.name for item in ret.items]
 
-
-
-    def get_ingress_details_in_namespace(self, name, namespace):
-        """Gets ingress details in given namespace.
-        Returns Ingress object representation. Can be accessed using
-        | Should Be Equal As integers    | ${service_details.spec.ports[0].port}    | 8080 |
-        - ``name``:
-          Name of ingress.
+    def get_cron_job_details_in_namespace(self, name, namespace):
+        """Gets cron job details in given namespace.
+        Returns Cron job object representation.
+          Name of cron job.
         - ``namespace``:
           Namespace to check
         """
-        ret = self.v1.read_namespaced_ingress(name, namespace)
+        ret = self.batchv1_beta1.read_namespaced_cron_job(name, namespace)
         return ret
-
-    def get_k8objects(self):
-      output = subprocess.check_output("kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n default",shell=True)
-      logger.debug(output)
-      return output
-
-    def get_cronjobs_in_namespace(self, name_pattern, namespace, label_selector=""):
-        """Gets cronjobs matching pattern in given namespace.
-        Can be optionally filtered by label. e.g. label_selector=label_key=label_value
-        Returns list of cronjobs.
-        - ``name_pattern``:
-          cronjobs name pattern to check
-        - ``namespace``:
-          Namespace to check
-        """
-        ret = self.v1.list_namespaced_cronjobs(namespace, watch=False, label_selector=label_selector)
-        r = re.compile(name_pattern)
-        cronjobs = [item for item in ret.items if r.match(item.metadata.name)]
-        return cronjobs
-
-    def get_replicasets_in_namespace(self, name_pattern, namespace, label_selector=""):
-        """Gets replicasets matching pattern in given namespace.
-        Can be optionally filtered by label. e.g. label_selector=label_key=label_value
-        Returns list of replicasets.
-        - ``name_pattern``:
-          replicasets name pattern to check
-        - ``namespace``:
-          Namespace to check
-        """
-        ret = self.v1.list_namespaced_replicasets(namespace, watch=False, label_selector=label_selector)
-        r = re.compile(name_pattern)
-        replicasets = [item for item in ret.items if r.match(item.metadata.name)]
-        return replicasets
+		
