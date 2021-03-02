@@ -4,11 +4,9 @@ Resource          ./cronjob_kw.robot
 
 *** Test Cases ***
 Job test case example
-    [Tags]    other
+    [Tags]    other    prerelaese
     List all cron jobs in namespace  kubelib-tests
-    List labels of cron job  ${cron_job_name}  kubelib-tests
 
 Jobs by label
-    [Tags]    prerelease
-    List cron jobs with label  .*  kubelib-tests  TestLabel=mytestlabel
-	
+    [Tags]    other    prerelease
+    List cron jobs with label  ${cron_job_name}  kubelib-tests  TestLabel=mytestlabel
