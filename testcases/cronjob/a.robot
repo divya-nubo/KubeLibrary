@@ -1,6 +1,5 @@
-		
 *** Settings ***
-Resource          ./cronjob_kw.robot
+Resource          ./b.robot
 
 *** Test Cases ***
 Job test case example
@@ -11,4 +10,3 @@ Job test case example
 Jobs by label
     [Tags]    prerelease
     List cron jobs with label  .*  kubelib-tests  TestLabel=mytestlabel
-	
