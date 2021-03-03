@@ -66,8 +66,6 @@ class KubeLibrary(object):
             except TypeError:
                 logger.error('Neither KUBECONFIG nor ~/.kube/config available.')
         self.v1 = client.CoreV1Api()
-        self.extensionsv1beta1 = client.ExtensionsV1beta1Api()
-        self.batchv1_beta1 = client.BatchV1beta1Api()
         self.batchv1 = client.BatchV1Api()
         self.appsv1 = client.AppsV1Api()
         if not cert_validation:
@@ -331,14 +329,14 @@ class KubeLibrary(object):
             for k, v in labels.items():
                 if pod.metadata.labels and k in pod.metadata.labels:
                     if pod.metadata.labels[k] != v:
-                        logger.error('Label "{k}" value "{v}" not matching actual "{pod.metadata.labels[k]}"')
+                        logger.error(f'Label "{k}" value "{v}" not matching actual "{pod.metadata.labels[k]}"')
                         return False
                 else:
-                    logger.error('Label "{k}" not found in actual')
+                    logger.error(f'Label "{k}" not found in actual')
                     return False
             return True
         except json.JSONDecodeError:
-            logger.error('Failed parsing Pod Labels JSON:{labels_json}')
+            logger.error(f'Failed parsing Pod Labels JSON:{labels_json}')
             return False
 
     def assert_pod_has_annotations(self, pod, annotations_json):
@@ -356,14 +354,14 @@ class KubeLibrary(object):
             for k, v in annotations.items():
                 if pod.metadata.annotations and k in pod.metadata.annotations:
                     if pod.metadata.annotations[k] != v:
-                        logger.error('Annotation "{k}" value "{v}" not matching actual "{pod.metadata.annotations[k]}"')
+                        logger.error(f'Annotation "{k}" value "{v}" not matching actual "{pod.metadata.annotations[k]}"')
                         return False
                 else:
-                    logger.error('Annotation "{k}" not found in actual')
+                    logger.error(f'Annotation "{k}" not found in actual')
                     return False
             return True
         except json.JSONDecodeError:
-            logger.error('Failed parsing Pod Annotations JSON:{annotations_json}')
+            logger.error(f'Failed parsing Pod Annotations JSON:{annotations_json}')
             return False
 
     def assert_container_has_env_vars(self, container, env_vars_json):
@@ -385,14 +383,14 @@ class KubeLibrary(object):
                         found = True
                         break
                     elif k == ev.name and v != ev.value:
-                        logger.error('Env var "{k}" value "{v}" not matching actual "{ev.value}"')
+                        logger.error(f'Env var "{k}" value "{v}" not matching actual "{ev.value}"')
                         return False
                 if not found:
-                    logger.error('Env var "{k}" not found in actual')
+                    logger.error(f'Env var "{k}" not found in actual')
                     return False
             return True
         except json.JSONDecodeError:
-            logger.error('Failed parsing Container Env Var JSON:{env_vars_json}')
+            logger.error(f'Failed parsing Container Env Var JSON:{env_vars_json}')
             return False
 
     def get_services_in_namespace(self, namespace, label_selector=""):
@@ -503,23 +501,10 @@ class KubeLibrary(object):
         ret = self.v1.delete_namespaced_service_account(name=name, namespace=namespace)
         return ret
 
-    def get_cron_jobs_in_namespace(self, namespace, label_selector=""):
-        """Gets cron jobs in given namespace.
+    def  get_daemonsets_in_namespace(self, namespace, label_selector=""):
+        """Gets a list of available daemonsets.
         Can be optionally filtered by label. e.g. label_selector=label_key=label_value
-        Returns list of strings.
-        - ``namespace``:
-          Namespace to check
-        """
-        ret = self.batchv1_beta1.list_namespaced_cron_job(namespace, watch=False, label_selector=label_selector)
+        Returns list of daemonsets.
+        """	
+        ret = self.appsv1.list_namespaced_daemon_set(namespace, watch=False, label_selector=label_selector)
         return [item.metadata.name for item in ret.items]
-
-    def get_cron_job_details_in_namespace(self, name, namespace):
-        """Gets cron job details in given namespace.
-        Returns Cron job object representation.
-          Name of cron job.
-        - ``namespace``:
-          Namespace to check
-        """
-        ret = self.batchv1_beta1.read_namespaced_cron_job(name, namespace)
-        return ret
-		
